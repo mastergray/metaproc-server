@@ -1,10 +1,10 @@
 {
   "name": "metaproc-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A server implementation using metaproc-js and express",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node ./test/index.js"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "common-fn-js": "^1.0.0",
     "express": "^4.17.1",
     "helmet": "^3.22.0",
-    "metaproc": "^1.0.0",
+    "metaproc": "^2.0.0",
     "my-ip": "^1.1.1"
   }
 }
