@@ -10,30 +10,8 @@ const METAPROC = require("metaproc");       // How this all gets structured
 // Creates METAPROC interface for implementing an HTTP server leveraging Express.j
 module.exports = SERVER = (fns) => METAPROC.init([
   METAPROC.ops,
-  SERVER.ops
-], fns, [
-  // Takes functions created from SERVER operations and chains them to a "standard" instance of metaproc,
-  // this is so the order of functions applied to STATE include running server setup and start at the right time:
-  // NOTE: Config passed to "start" method WILL be mutated by this new instance:
-  METAPROC.METHOD("start", (config) => (metaproc) => {
-    return METAPROC.Standard()
-      .aptoifnot("postLimit", (STATE) => "10mb")      // Default postLimit of "10mb",
-      .aptoifnot("port", (STATE) => 3000)             // Default port number of 3000
-      .aptoifnot("CORS", STATE => [])                 // Default CORS
-      .aptoifnot("address", (STATE) => undefined)     // Default address is undefined
-      .apto("events", (STATE) => new EventEmitter())  // Handles events between requests)
-      .apto("app", (STATE) => express())              // Initalize instance of express to operate on
-      .apto("app", setupServer)                       // Setup server using config
-      .chain(metaproc)                                // Chain functions from instance
-      .apto("app", startServer)                       // Start server using config
-      .run(config)
-    .then((STATE) => ({                               // Returns intialized config
-      "postLimit":STATE.postLimit,
-      "port":STATE.port,
-      "CORS":STATE.CORS,
-      "address":STATE.address||myIP()
-    }))
-  })
+  SERVER.ops,
+  SERVER.methods
 ])
 
 /**
@@ -83,6 +61,39 @@ SERVER.ops = [
   // Create event listener using instance of EVENTEMITTER  stored in STATE:
   METAPROC.OP("when", (evt, fn) => addEventHandler(evt, fn)),
 ]
+
+/**
+ *
+ *  Methods
+ *
+ */
+
+ SERVER.methods = [
+
+   // Takes functions created from SERVER operations and chains them to a "standard" instance of metaproc,
+   // this is so the order of functions applied to STATE include running server setup and start at the right time:
+   // NOTE: Config passed to "start" method WILL be mutated by this new instance:
+   METAPROC.METHOD("start", (config) => (metaproc) => {
+     return METAPROC.Standard()
+       .aptoifnot("postLimit", (STATE) => "10mb")      // Default postLimit of "10mb",
+       .aptoifnot("port", (STATE) => 3000)             // Default port number of 3000
+       .aptoifnot("CORS", STATE => [])                 // Default CORS
+       .aptoifnot("address", (STATE) => undefined)     // Default address is undefined
+       .apto("events", (STATE) => new EventEmitter())  // Handles events between requests)
+       .apto("app", (STATE) => express())              // Initalize instance of express to operate on
+       .apto("app", setupServer)                       // Setup server using config
+       .chain(metaproc)                                // Chain functions from instance
+       .apto("app", startServer)                       // Start server using config
+       .run(config)
+     .then((STATE) => ({                               // Returns intialized config
+       "postLimit":STATE.postLimit,
+       "port":STATE.port,
+       "CORS":STATE.CORS,
+       "address":STATE.address||myIP()
+     }))
+   })
+
+ ]
 
 /**
  *
