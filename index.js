@@ -47,8 +47,6 @@ module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
 
   // use :: (STATE, EXPRESS.REQ, EXPRESS.RES, EXPRESS.NEXT) -> VOID) -> METAPROC
   // Binds "middleware" to EXPRSS instance stored in STATE:
-  // addRoute :: (STRING, STRING, (STATE, EXPRESS.REQ, EXPRESS.RES, EXPRSS.NEXT) -> VOID) -> METAPROC
-  // Binds route to EXPRESS instance stored in STATE:
   .augment("use", (method, route, fn) => (metaproc) => metaproc.apto("app", (app, state) => {
     app.use((req, res, next) => {
       fn(state, req, res, next)
