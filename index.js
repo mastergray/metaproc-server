@@ -4,7 +4,7 @@ const myIP = require('my-ip');              // Shows IP of where server is runni
 const express = require('express');         // Handles HTTP routes, requests, and responses
 const helmet = require('helmet');           // Basic server security
 const EventEmitter = require('events');     // To help process requests without blocking the event loop
-const METAPROC = require("/home/mastergray/dev/metaproc-js/index.js");       // How this all gets structured
+const METAPROC = require("metaproc");       // How this all gets structured
 
 // SERVER :: (STATE, OPS) -> SERVER
 // HTTP Server implmentation using METAPROC and EXPRESS

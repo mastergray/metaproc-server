@@ -1,4 +1,4 @@
-const SERVER = require("../index2.js")
+const SERVER = require("../index.js")
 
 SERVER_A =  (STATE) => SERVER(STATE).GET("/", (STATE, req, res, next) => {
   let html = Object.keys(STATE.visits).reduce((html, link) => {
