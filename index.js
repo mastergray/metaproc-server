@@ -45,15 +45,6 @@ module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
   // Binds "OPTIONS" route to EXPRESS instance stored in STATE:
   .augment("OPTIONS", (route, fn) => (metaproc) => metaproc.addRoute("options", route, fn))
 
-  // use :: (STATE, EXPRESS.REQ, EXPRESS.RES, EXPRESS.NEXT) -> VOID) -> METAPROC
-  // Binds "middleware" to EXPRSS instance stored in STATE:
-  .augment("use", (method, route, fn) => (metaproc) => metaproc.apto("app", (app, state) => {
-    app.use((req, res, next) => {
-      fn(state, req, res, next)
-    });
-    return app;
-  }))
-
   /**
    *
    *  Event Operations
@@ -145,7 +136,7 @@ module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
       .asifnot("app", express())              // Initalize instance of express to operate on
       .asifnot("events", new EventEmitter())  // Handles events between requests)
       .setup()                                // Initialze server
-      .chain(() => metaproc)                  // Initialize routes
+      .chains(metaproc)                       // Initialize routes
       .start()                                // Start server
       .run(config)
     .then((state) => {
