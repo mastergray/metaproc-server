@@ -6,9 +6,9 @@ const helmet = require('helmet');           // Basic server security
 const EventEmitter = require('events');     // To help process requests without blocking the event loop
 const METAPROC = require("metaproc");       // How this all gets structured
 
-// SERVER :: (STATE, OPS) -> SERVER
+// SERVER :: (STATE) -> SERVER
 // HTTP Server implmentation using METAPROC and EXPRESS
-module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
+module.exports = SERVER = (STATE) => METAPROC.Standard(STATE)
 
   /**
    *
@@ -17,12 +17,15 @@ module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
    */
 
   // addRoute :: (STRING, STRING, (STATE, EXPRESS.REQ, EXPRESS.RES, EXPRSS.NEXT) -> VOID) -> METAPROC
-  // Binds route to EXPRESS instance stored in STATE:
-  .augment("addRoute", (method, route, fn) => (metaproc) => metaproc.apto("app", (app, state) => {
-    app[method](route, (req, res, next) => {
-      fn(state, req, res, next)
-    });
-    return app;
+  // Stores function in "HANDLERS" that binds route to EXPRESS instance stored in STATE:
+  .augment("addRoute", (method, route, fn) => (metaproc) => metaproc.apto("HANDLERS", (HANDLERS) => {
+    HANDLERS.push(STATE => {
+      STATE.app[method](route, (req, res, next) => {
+        fn(STATE, req, res, next)
+      });
+      return STATE;
+    })
+    return HANDLERS;
   }))
 
   // GET :: ((STRING, (STATE, EXPRESS.REQ, EXPRESS.RES, EXPRESS.NEXT) -> VOID) -> METAPROC
@@ -52,12 +55,15 @@ module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
    */
 
   // when :: (STRING, (EVENT) -> VOID) -> METAPROC
-  // Creates an event listener for instance of EVENTEMITTER stored in STATE:
-  .augment("when", (evt, fn) => (metaproc) =>  metaproc.apto("events", (events, state) => {
-    events.on(evt, (...vals) => {
-      fn.apply(null, [state].concat(vals));
-    })
-    return events;
+  // Stores function in HANDLERS that creates an event listener for instance of EVENTEMITTER stored in STATE:
+  .augment("when", (evt, fn) => (metaproc) => metaproc.apto("HANDLERS", (HANDLERS) => {
+    HANDLERS.push(STATE => {
+      STATE.events.on(evt, (...vals) => {
+        fn.apply(null, [STATE].concat(vals));
+      })
+      return STATE;
+    });
+    return HANDLERS;
   }))
 
   /**
@@ -66,8 +72,16 @@ module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
    *
    */
 
+  // applyHandlers :: (VOID) -> METAPROC
+  // Binds all handlers to STATE:
+  .augment("applyHandlers", () => metaproc => metaproc.ap(STATE => {
+    return STATE.HANDLERS.reduce((STATE, handler) => {
+      return handler(STATE);
+    }, STATE);
+  }))
+
   // :: (VOID) -> (METAPROC) -> METAPROC
-  // Setup express server stored in STATE:
+  // Setup EXPRESS server stored in STATE:
   // NOTE: If this needs to be modified, it can be overwrriten before applied by "init" OP:
   .augment("setup", () => (metaproc) => metaproc.apto("app", (app, state) => {
 
@@ -127,21 +141,34 @@ module.exports = SERVER = (FNS, OPS) => METAPROC.Standard(FNS, OPS)
   // create :: (OBJECT, (STATE) -> VOID) -> METAPROC
   // Initializes EXPRESS server with given CONFIG object ,
   // supports optional banner METHOD for printing message to console  once server is running
-  .augment("create", (config, banner) => (metaproc) => {
-    return SERVER()
-      .asifnot("postLimit", "10mb")           // Default postLimit of "10mb",
-      .asifnot("port", 3000)                  // Default port of "3000"
-      .asifnot("CORS", [])                    // Default CORS
-      .asifnot("address", undefined)          // Default address
-      .asifnot("app", express())              // Initalize instance of express to operate on
-      .asifnot("events", new EventEmitter())  // Handles events between requests)
-      .setup()                                // Initialze server
-      .chains(metaproc)                       // Initialize routes
-      .start()                                // Start server
-      .run(config)
-    .then((state) => {
-      state.address = state.address || myIP(); // So IP can be referenced from routes
-      console.log(banner !== undefined ? banner(state) : `Running @ http://${state.address}:${state.port}`)
+  .augment("launch", (banner) => metaproc => metaproc
+    .setup()                      // Initialize server
+    .applyHandlers()              // Initialize handlers
+    .start()                      // Start server
+    .asifnot("address", myIP())   // So IP can be referenced from routes
+    .ap((state) => {
+      console.log(banner !== undefined
+        ? banner(state)
+        : `Running @ http://${state.address}:${state.port}`
+      );
       return state;
     })
-  })
+  )
+
+/**
+ *
+ *  "Static" Method
+ *
+ */
+
+// of :: (OBJECT) -> METAPROC
+// "Unit" monadic operator :: (STRING, STRING) -> METAPROC
+SERVER.of = (STATE) => METAPROC.Standard(STATE)
+  .asifnot("postLimit", "10mb")           // Default postLimit of "10mb",
+  .asifnot("port", 3000)                  // Default port of "3000"
+  .asifnot("CORS", [])                    // Default CORS
+  .asifnot("address", undefined)          // Default address
+  .asifnot("app", express())              // EXPRESS instance
+  .asifnot("events", new EventEmitter())  // EVENTEMITTER instance
+  .asifnot("HANDLERS", [])                // Stores routes and listeners to apply to instance at "create":
+.lift(SERVER)                             // Initializes METAPROC instance

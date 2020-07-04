@@ -2,7 +2,7 @@ const SERVER = require("../index.js");
 const UTIL = require("common-fn-js");
 sitemap = {"/":0, "/test":0, "/echo":0, "/visits":0, "/form":0};
 
-SERVER_A = SERVER()
+SERVER_A = (CONFIG) => SERVER.of(CONFIG)
 .asifnot("visits", sitemap)
 .GET("/", (STATE, req, res, next) => {
   let html = Object.keys(STATE.visits).reduce((html, link) => {
@@ -13,21 +13,21 @@ SERVER_A = SERVER()
 });
 
 
-SERVER_B = SERVER().GET("/test", (STATE, req, res, next) => {
+SERVER_B = (CONFIG) => SERVER.of(CONFIG).GET("/test", (STATE, req, res, next) => {
   res.send("test!");
 });
 
-SERVER_C = SERVER().GET("/hello", (STATE, req, res, next) => {
+SERVER_C = (CONFIG) => SERVER.of(CONFIG).GET("/hello", (STATE, req, res, next) => {
   res.send("hello world!");
 });
 
-ECHO_SERVER = SERVER().augment("echo", (route) => (metaproc) =>  {
+ECHO_SERVER = (CONFIG) => SERVER.of(CONFIG).augment("echo", (route) => (metaproc) =>  {
   return metaproc.GET(route, async (STATE, req, res, next) => {
     res.send(`http://${STATE.address}:${STATE.port}`)
   })
 }).echo("/echo")
 
-FORM_SERVER = SERVER()
+FORM_SERVER = (CONFIG) => SERVER.of(CONFIG)
   .GET("/form", (STATE, req, res, next) => {
     let html = `
       <h2>TeSt FoRm</h2>
@@ -46,12 +46,12 @@ FORM_SERVER = SERVER()
     res.send("Submitted, now go away.");
   })
 
-BREAK_SERVER = SERVER()
+BREAK_SERVER = (CONFIG) => SERVER.of(CONFIG)
   .GET("/break", (STATE, req, res, next) => {
     next("I done broke it");
   })
 
-WATCHER = SERVER()
+WATCHER = (CONFIG) => SERVER.of(CONFIG)
 .asifnot("visits", sitemap)
 .GET("/visits", (STATE, req, res, next) => {
   let html = Object.keys(STATE.visits).reduce((html, whereFrom) => {
@@ -70,20 +70,20 @@ WATCHER = SERVER()
 })
 
 
-SERVER()
+SERVER.of({"port":3005})
 .GET("*", (STATE, req, res, next) => {
   console.log(`${UTIL.timestamp()} ${req.originalUrl} => ${req.connection.remoteAddress}`)
   STATE.events.emit("visit", req.originalUrl);
   next();
 })
-.chains(SERVER_A)
-.chains(SERVER_B)
-.chains(SERVER_C)
-.chains(ECHO_SERVER)
-.chains(FORM_SERVER)
-.chains(BREAK_SERVER)
-.chains(WATCHER)
-.create({"port":3005})
-.catch((err) => {
+.chain(SERVER_A)
+.chain(SERVER_B)
+.chain(SERVER_C)
+.chain(ECHO_SERVER)
+.chain(FORM_SERVER)
+.chain(BREAK_SERVER)
+.chain(WATCHER)
+.launch()
+.fail((err) => {
   console.log(err.msg)
 })
