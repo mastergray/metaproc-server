@@ -48,6 +48,12 @@ module.exports = SERVER = (STATE) => METAPROC.Standard(STATE)
   // Binds "OPTIONS" route to EXPRESS instance stored in STATE:
   .augment("OPTIONS", (route, fn) => (metaproc) => metaproc.addRoute("options", route, fn))
 
+  // Serve static files for the given route from the given directory:
+  .augment("static", (route, dirname) => metaproc => metaproc.apto("app", (app) => {
+    app.use(route, express.static(dirname));
+    return app;
+  }))
+
   /**
    *
    *  Event Operations
@@ -124,10 +130,15 @@ module.exports = SERVER = (STATE) => METAPROC.Standard(STATE)
 
     // Catch all error handler:
     // NOTE: This is triggered by next(err):
+    // TODO: Better error handling...
     app.use((err, req, res, next) => {
       console.error(err);
-      console.error(`UNCAUGHT ERROR: ${err}`);
-      res.status(500).send("Internal Server Error");
+      if (err.code) {
+        res.status(err.code).send(err.msg);
+      } else {
+        console.error(`UNCAUGHT ERROR: ${err.msg}`);
+        res.status(500).send("Internal Server Error");
+      }
     });
 
     // Start listening....
